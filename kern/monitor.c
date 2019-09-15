@@ -64,13 +64,21 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 	cprintf("Stack backtrace:\n");
 	while(ebp > 0){
 		uint32_t eip = *((uint32_t*)ebp + 1);
-		uint32_t arg1 = *((uint32_t*)ebp + 2);
-		uint32_t arg2 = *((uint32_t*)ebp + 3);
-		uint32_t arg3 = *((uint32_t*)ebp + 4);
-		uint32_t arg4 = *((uint32_t*)ebp + 5);
-		uint32_t arg5 = *((uint32_t*)ebp + 6);
+		// uint32_t arg1 = *((uint32_t*)ebp + 2);
+		// uint32_t arg2 = *((uint32_t*)ebp + 3);
+		// uint32_t arg3 = *((uint32_t*)ebp + 4);
+		// uint32_t arg4 = *((uint32_t*)ebp + 5);
+		// uint32_t arg5 = *((uint32_t*)ebp + 6);
 
-		cprintf("  ebp %08x eip %08x args %08x %08x %08x %08x %08x\n", ebp, eip, arg1, arg2, arg3, arg4, arg5);
+		cprintf("  ebp %08x eip %08x args %08x %08x %08x %08x %08x\n"
+			, ebp
+			, eip
+			, *((uint32_t*)ebp + 2)
+			, *((uint32_t*)ebp + 3)
+			, *((uint32_t*)ebp + 4)
+			, *((uint32_t*)ebp + 5)
+			, *((uint32_t*)ebp + 6));
+			
 		// debuginfo_eip(uintptr_t addr, struct Eipdebuginfo *info)
 		// kern/entry.S:70: <unknown>+0
 		struct Eipdebuginfo eipInfo;
