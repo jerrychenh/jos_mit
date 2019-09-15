@@ -21,7 +21,7 @@ sys_cputs(const char *s, size_t len)
 	// Destroy the environment if not.
 
 	// LAB 3: Your code here.
-
+	user_mem_assert(curenv, (void*)s, len, PTE_U);
 	// Print the string supplied by the user.
 	cprintf("%.*s", len, s);
 }
@@ -83,7 +83,6 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 			cprintf("syscall cr3: %x\n", cr3);
 			cprintf("kern pgdir: %x\n", kern_pgdir);
 
-			user_mem_assert(curenv, (void*)a1, a2, PTE_U);
 			sys_cputs((void *)a1, a2);
 			return 0;
 			
