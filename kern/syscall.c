@@ -281,8 +281,11 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 	switch (syscallno) {
 		case SYS_cputs:
 
-			cprintf("syscall cr3: %x\n", cr3);
-			cprintf("kern pgdir: %x\n", kern_pgdir);
+			// Testing if current cr3 is kern_pgdir
+			// Conclusion: Syscall from user env do not change cr3
+			// Only after env change/destroy will chang cr3
+			// cprintf("syscall cr3: %x\n", cr3);
+			// cprintf("kern pgdir: %x\n", kern_pgdir);
 
 			sys_cputs((void *)a1, a2);
 			return 0;
@@ -295,6 +298,10 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 			
 		case SYS_env_destroy:
 			return sys_env_destroy(a1);
+
+		case SYS_yield:
+			sys_yield();
+			return 0;
 
 		default:
 			return -E_INVAL;

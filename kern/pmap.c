@@ -270,6 +270,15 @@ mem_init_mp(void)
 	//
 	// LAB 4: Your code here:
 
+	// CPU0's kernel stack is already mapped
+	// what is the relation between bootstack and percpu_kstacks?
+	for(int i = 0; i < NCPU; ++i){
+		uintptr_t kstacktop_i = KSTACKTOP - i * (KSTKSIZE + KSTKGAP);
+		// percpu_kstacks is kernel addr, which is loaded in kernel data seg
+		// note that kernel is loaded in physical addr KERNBASE
+		boot_map_region(kern_pgdir, kstacktop_i - KSTKSIZE, KSTKSIZE, PADDR(percpu_kstacks[i]), PTE_W|PTE_P);
+	}
+
 }
 
 // --------------------------------------------------------------
