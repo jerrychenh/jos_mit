@@ -66,17 +66,32 @@ _pgfault_upcall:
 	//
 	// LAB 4: Your code here.
 
+    addl $8, %esp           //make esp point to reg_edi
+    movl 40(%esp), %eax     //save esp of when the interrupt occurred to eax
+    movl 32(%esp), %ecx     //save eip of when the interrupt occurred to ecx
+    movl %ecx, -4(%eax)     //push eip to stack, notice esp is not updated(-4)
+
 	// Restore the trap-time registers.  After you do this, you
 	// can no longer modify any general-purpose registers.
 	// LAB 4: Your code here.
+	popal
+	// don't use regs in struct PushRegs from now on
+	
 
 	// Restore eflags from the stack.  After you do this, you can
 	// no longer use arithmetic operations or anything else that
 	// modifies eflags.
 	// LAB 4: Your code here.
+	addl $4, %esp           //skip eip
+	popfl
 
 	// Switch back to the adjusted trap-time stack.
 	// LAB 4: Your code here.
+	popl %esp
 
 	// Return to re-execute the instruction that faulted.
 	// LAB 4: Your code here.
+	// make esp point to eip
+	lea -4(%esp), %esp
+	// this will pop the stack, so eip should store in current esp
+	ret
