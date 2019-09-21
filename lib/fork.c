@@ -47,7 +47,7 @@ pgfault(struct UTrapframe *utf)
 	memcpy(PFTEMP, addr, PGSIZE);
 
 	// map page in PFTEMP to addr, the page in addr will deref
-	if(sys_page_map(0, PFTEMP, 0, addr, PTE_P|PTE_U) < 0){
+	if(sys_page_map(0, PFTEMP, 0, addr, PTE_P|PTE_U|PTE_W) < 0){
 		panic(" wrong for sys_page_map in pgfault");
 	}
 
@@ -75,7 +75,7 @@ duppage(envid_t envid, unsigned pn)
 	void *va = (void*)(pn * PGSIZE);
 
 	// LAB 4: Your code here.
-	if ((uvpd[PDX(va)] & PTE_P) && (uvpt[pn] & PTE_P)){
+	if ((uvpd[PDX(va)] & PTE_P) && (uvpt[pn] & PTE_P) && (uvpt[pn] & PTE_U)){
 		if(uvpt[pn] & (PTE_W | PTE_COW)) {
 			// parent page is writable or copy-on-write
 			if(sys_page_map(0, va, envid, va, PTE_P|PTE_U|PTE_COW) < 0){
@@ -119,7 +119,8 @@ envid_t
 fork(void)
 {
 	// LAB 4: Your code here.
-	sys_env_set_pgfault_upcall(0, pgfault);
+	// it will also alloc uxstack for cur env
+	set_pgfault_handler(pgfault);
 	envid_t envid = sys_exofork();
 	if(envid < 0){
 		panic("lib fork fail");
@@ -143,7 +144,8 @@ fork(void)
 	}
 	
 	// set child page fault handler in child env
-	if(sys_env_set_pgfault_upcall(envid, pgfault) < 0){
+	extern void _pgfault_upcall(void);
+	if(sys_env_set_pgfault_upcall(envid, _pgfault_upcall) < 0){
 		panic("error set user handler!");
 	}
 

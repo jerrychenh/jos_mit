@@ -324,7 +324,7 @@ page_fault_handler(struct Trapframe *tf)
 	fault_va = rcr2();
 
 	// Handle kernel-mode page faults.
-	print_trapframe(tf);
+	// print_trapframe(tf);
 	// LAB 3: Your code here.
 	if((tf->tf_cs & 3) == 0){
 		// cprintf("page fault: %x\n", tf->tf_cs);
