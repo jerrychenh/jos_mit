@@ -27,7 +27,7 @@ pgfault(struct UTrapframe *utf)
 
 	// LAB 4: Your code here.
 	addr = ROUNDDOWN(addr, PGSIZE);
-	if ((uvpt[(uint32_t)addr/PGSIZE] & PTE_COW) == 0 || (err & FEC_WR) == 0){
+	if ((uvpt[PGNUM(addr)] & PTE_COW) == 0 && (err & FEC_WR) == 0){
 		panic("wrong in fork pgfault");
 	}
 
@@ -38,16 +38,18 @@ pgfault(struct UTrapframe *utf)
 	//   You should make three system calls.
 
 	// LAB 4: Your code here.
-	if(sys_page_map(0, addr, 0, PFTEMP, PTE_P|PTE_U) < 0){
-		panic(" wrong for sys_page_map in pgfault");
-	}
 
-	if(sys_page_alloc(0, addr, PTE_P|PTE_W|PTE_U) < 0){
+	if(sys_page_alloc(0, PFTEMP, PTE_P|PTE_W|PTE_U) < 0){
 		panic(" wrong for sys_page_alloc in pgfault");
 	}
 
-	memcpy(addr, PFTEMP, PGSIZE);
+	// copy content in addr to PFTEMP, note that addr could be read but not write
+	memcpy(PFTEMP, addr, PGSIZE);
 
+	// map page in PFTEMP to addr, the page in addr will deref
+	if(sys_page_map(0, PFTEMP, 0, addr, PTE_P|PTE_U) < 0){
+		panic(" wrong for sys_page_map in pgfault");
+	}
 
 	if(sys_page_unmap(0, PFTEMP) < 0){
 		panic(" wrong for sys_page_unmap in pgfault");
@@ -73,21 +75,24 @@ duppage(envid_t envid, unsigned pn)
 	void *va = (void*)(pn * PGSIZE);
 
 	// LAB 4: Your code here.
-	pte_t volatile *pte = &uvpt[pn];
-	if(*pte & (PTE_W | PTE_COW)){
-		// parent page is writable or copy-on-write
-		if(sys_page_map(0, va, envid, va, PTE_P|PTE_U|PTE_COW) < 0){
-			panic("error map page in duppage!");
-		}
+	if ((uvpd[PDX(va)] & PTE_P) && (uvpt[pn] & PTE_P)){
+		if(uvpt[pn] & (PTE_W | PTE_COW)) {
+			// parent page is writable or copy-on-write
+			if(sys_page_map(0, va, envid, va, PTE_P|PTE_U|PTE_COW) < 0){
+				panic("error map page in duppage!");
+			}
 
-		// this is wrong, UVPT readonly
-		// *pte = *pte | PTE_COW;
-		if(sys_page_map(0, va, 0, va, PTE_P|PTE_U|PTE_COW) < 0){
-			panic("error map page in duppage!");
+			// this is wrong, UVPT readonly
+			// *pte = *pte | PTE_COW;
+
+			// why should parent map PTE_COW again? 
+			if(sys_page_map(0, va, 0, va, PTE_P|PTE_U|PTE_COW) < 0){
+				panic("error map page in duppage!");
+			}
 		}
-	}
-	else if(sys_page_map(0, va, envid, va, PTE_P|PTE_U) < 0){
-		panic("error map page in duppage...");
+		else if(sys_page_map(0, va, envid, va, PTE_P|PTE_U) < 0){
+			panic("error map page in duppage...");
+		}
 	}
 
 	// panic("duppage not implemented");
@@ -128,10 +133,9 @@ fork(void)
 	// in parent
 
 	// dup page
-	extern unsigned char end[];
 	uintptr_t addr;
-	for (addr = UTEXT; addr < (uintptr_t)end; addr += PGSIZE)
-		duppage(envid, addr/PGSIZE);
+	for (addr = 0; addr < USTACKTOP; addr += PGSIZE)
+		duppage(envid, PGNUM(addr));
 
 	//allocate exception stack page
 	if(sys_page_alloc(envid, (void*)(UXSTACKTOP - PGSIZE), PTE_P|PTE_U|PTE_W) < 0){
