@@ -31,6 +31,8 @@ block_is_free(uint32_t blockno)
 {
 	if (super == 0 || blockno >= super->s_nblocks)
 		return 0;
+
+	// ch: bitmap of type uint32, each bit for one block
 	if (bitmap[blockno / 32] & (1 << (blockno % 32)))
 		return 1;
 	return 0;
@@ -54,6 +56,9 @@ free_block(uint32_t blockno)
 // -E_NO_DISK if we are out of blocks.
 //
 // Hint: use free_block as an example for manipulating the bitmap.
+
+// ch: kind of like alloc_pages, bitmap is equivalent to pages which is responsible
+// to manage physical disk(memory)
 int
 alloc_block(void)
 {
@@ -62,8 +67,22 @@ alloc_block(void)
 	// super->s_nblocks blocks in the disk altogether.
 
 	// LAB 5: Your code here.
-	panic("alloc_block not implemented");
-	return -E_NO_DISK;
+	uint32_t blk = 2;
+	while(!block_is_free(blk) && blk < super->s_nblocks){
+		++blk;
+	}
+
+	if(blk == super->s_nblocks){
+		return -E_NO_DISK;
+	}
+
+	bitmap[blk/32] &= ~(1<<(blk%32));
+	// bitmap started from block 2, which is sector 8
+	void* addr = &bitmap[blk/32];
+	flush_block(addr);
+
+	// panic("alloc_block not implemented");
+	return blk;
 }
 
 // Validate the file system bitmap.
