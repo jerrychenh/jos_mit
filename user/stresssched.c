@@ -32,6 +32,8 @@ umain(int argc, char **argv)
 	if (counter != 10*10000)
 		panic("ran on two CPUs at once (counter is %d)", counter);
 
+	
+	thisenv = &envs[sys_getenvid() & 0x3ff];
 	// Check that we see environments running on different CPUs
 	cprintf("[%08x] stresssched on CPU %d\n", thisenv->env_id, thisenv->env_cpunum);
 
