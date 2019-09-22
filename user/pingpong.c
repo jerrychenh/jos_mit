@@ -9,6 +9,7 @@ umain(int argc, char **argv)
 	envid_t who;
 
 	if ((who = fork()) != 0) {
+		//parent
 		// get the ball rolling
 		cprintf("send 0 from %x to %x\n", sys_getenvid(), who);
 		ipc_send(who, 0, 0, 0);
@@ -20,6 +21,7 @@ umain(int argc, char **argv)
 		if (i == 10)
 			return;
 		i++;
+		// cprintf("send %d from %x to %x\n", i, sys_getenvid(), who);
 		ipc_send(who, i, 0, 0);
 		if (i == 10)
 			return;

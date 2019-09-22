@@ -315,7 +315,7 @@ sys_page_unmap(envid_t envid, void *va)
 //
 // The send also can fail for the other reasons listed below.
 //
-// Otherwise, the send succeeds, and the target's ipc fields are
+// Otherwise, the send succeeds, and the **target's** ipc fields are
 // updated as follows:
 //    env_ipc_recving is set to 0 to block future sends;
 //    env_ipc_from is set to the sending envid;
@@ -324,6 +324,8 @@ sys_page_unmap(envid_t envid, void *va)
 // The target environment is marked runnable again, returning 0
 // from the paused sys_ipc_recv system call.  (Hint: does the
 // sys_ipc_recv function ever actually return?)
+// ch: do not return, it is run by the schedule, return value is eax!
+
 //
 // If the sender wants to send a page but the receiver isn't asking for one,
 // then no page mapping is transferred, but no error occurs.
@@ -348,7 +350,57 @@ static int
 sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 {
 	// LAB 4: Your code here.
-	panic("sys_ipc_try_send not implemented");
+	struct Env *env;
+	if(envid2env(envid, &env, 0) < 0){
+		return -E_BAD_ENV;
+	}
+
+	if(!env->env_ipc_recving){
+		return -E_IPC_NOT_RECV;
+	}
+
+	if((uintptr_t)srcva < UTOP && (uintptr_t)srcva % PGSIZE){
+		return -E_INVAL;
+	}
+
+	if((uintptr_t)srcva < UTOP && (perm & (~PTE_SYSCALL)) != 0){
+		return -E_INVAL;
+	}
+	
+	pte_t *pte = &(curenv->env_pgdir[PDX(srcva)]);
+	if((uintptr_t)srcva < UTOP){
+		if(!(*pte | PTE_P))
+			return -E_INVAL;
+
+		if(!(pte[PTX(srcva)] | PTE_P)){
+			return -E_INVAL;
+		}
+	}
+
+	if((perm & PTE_W) && !(pte[PTX(srcva)] | PTE_W)){
+		return -E_INVAL;
+	}
+
+	if((uintptr_t)env->env_ipc_dstva < UTOP){
+		// cprintf("ipc map: %x", env->env_ipc_dstva);
+		if(sys_page_map(0, srcva, envid, env->env_ipc_dstva, perm) < 0){
+			return -E_NO_MEM;
+		}
+
+		env->env_ipc_perm = perm;
+	}
+
+	env->env_ipc_from = curenv->env_id;
+	env->env_ipc_value = value;
+	env->env_ipc_perm = 0;
+	env->env_ipc_recving = false;
+
+	// cprintf("recv envid: %x, value: %d\n", env->env_id, env->env_ipc_value);
+
+	env->env_tf.tf_regs.reg_eax = 0;
+	env->env_status = ENV_RUNNABLE;
+	return 0;
+	// panic("sys_ipc_try_send not implemented");
 }
 
 // Block until a value is ready.  Record that you want to receive
@@ -362,11 +414,22 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 // return 0 on success.
 // Return < 0 on error.  Errors are:
 //	-E_INVAL if dstva < UTOP but dstva is not page-aligned.
+
+// already saved user stack and now in kernel stack, 
+// so the user stack data is already in curenv, and free to yield
 static int
 sys_ipc_recv(void *dstva)
 {
 	// LAB 4: Your code here.
-	panic("sys_ipc_recv not implemented");
+	if((uintptr_t)dstva < UTOP && ((uintptr_t)dstva % PGSIZE)){
+		return -E_INVAL;
+	}
+
+	curenv->env_ipc_dstva = dstva;
+	curenv->env_ipc_recving = true;
+	curenv->env_status = ENV_NOT_RUNNABLE;
+	sys_yield();
+	// panic("sys_ipc_recv not implemented");
 	return 0;
 }
 
@@ -427,6 +490,12 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 
 		case SYS_env_set_pgfault_upcall:
 			return sys_env_set_pgfault_upcall(a1, (void*)a2);
+
+		case SYS_ipc_recv:
+			return sys_ipc_recv((void*)a1);
+
+		case SYS_ipc_try_send:
+			return sys_ipc_try_send(a1, a2, (void*)a3, a4);
 
 		default:
 			return -E_INVAL;
