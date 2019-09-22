@@ -47,10 +47,56 @@
 /*
  * Lab 3: Your code here for generating entry points for the different traps.
  */
+	TRAPHANDLER_NOEC(th0, 0)
+    TRAPHANDLER_NOEC(th1, 1)
+    TRAPHANDLER_NOEC(th3, 3)
+    TRAPHANDLER_NOEC(th4, 4)
+    TRAPHANDLER_NOEC(th5, 5)
+    TRAPHANDLER_NOEC(th6, 6)
+    TRAPHANDLER_NOEC(th7, 7)
+    TRAPHANDLER(th8, 8)
+    TRAPHANDLER_NOEC(th9, 9)
+    TRAPHANDLER(th10, 10)
+    TRAPHANDLER(th11, 11)
+    TRAPHANDLER(th12, 12)
+    TRAPHANDLER(th13, 13)
+    TRAPHANDLER(th14, 14)
+    TRAPHANDLER_NOEC(th16, 16)
 
+    TRAPHANDLER_NOEC(irq32, 32)
+    TRAPHANDLER_NOEC(irq33, 33)
+    TRAPHANDLER_NOEC(irq34, 34)
+    TRAPHANDLER_NOEC(irq35, 35)
+    TRAPHANDLER_NOEC(irq36, 36)
+    TRAPHANDLER_NOEC(irq37, 37)
+    TRAPHANDLER_NOEC(irq38, 38)
+    TRAPHANDLER_NOEC(irq39, 39)
+    TRAPHANDLER_NOEC(irq40, 40)
+    TRAPHANDLER_NOEC(irq41, 41)
+    TRAPHANDLER_NOEC(irq42, 42)
+    TRAPHANDLER_NOEC(irq43, 43)
+    TRAPHANDLER_NOEC(irq44, 44)
+    TRAPHANDLER_NOEC(irq45, 45)
+    TRAPHANDLER_NOEC(irq46, 46)
+    TRAPHANDLER_NOEC(irq47, 47)
+
+    TRAPHANDLER_NOEC(th_syscall, T_SYSCALL)
 
 
 /*
  * Lab 3: Your code here for _alltraps
  */
-
+_alltraps:
+    /* ch: following 3 lines push the first part of Trapframe, see in trap.h
+     * The rest of Trapframe is pushed by the processor when interrupts happen
+     */
+	pushl %ds
+    pushl %es
+    pushal
+    pushl $GD_KD
+    popl %ds
+    pushl $GD_KD
+    popl %es
+    pushl %esp
+    call trap
+	

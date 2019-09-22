@@ -69,6 +69,7 @@ dumbfork(void)
 		duppage(envid, addr);
 
 	// Also copy the stack we are currently running on.
+	// the address of addr var, which is in the stack of course.
 	duppage(envid, ROUNDDOWN(&addr, PGSIZE));
 
 	// Start the child environment running
