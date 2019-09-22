@@ -143,6 +143,9 @@ fs_init(void)
 //
 // Returns:
 //	0 on success (but note that *ppdiskbno might equal 0).
+//  ch: it only alloc the indirect block, but not the actual block used to store file data.
+//  if *ppdiskbno equal 0, the caller should alloc the block
+
 //	-E_NOT_FOUND if the function needed to allocate an indirect block, but
 //		alloc was 0.
 //	-E_NO_DISK if there's no space on the disk for an indirect block.
@@ -154,7 +157,70 @@ static int
 file_block_walk(struct File *f, uint32_t filebno, uint32_t **ppdiskbno, bool alloc)
 {
        // LAB 5: Your code here.
-       panic("file_block_walk not implemented");
+    
+	if(filebno >= NDIRECT + NINDIRECT){
+		return -E_INVAL;
+	}
+
+	if(filebno >= NDIRECT){
+		if(f->f_indirect == 0){
+			if(alloc){
+				// alloc a block for f_indirect, like pgdir, set content to 0
+				uint32_t blkno = alloc_block();
+				if(blkno < 0){
+					return -E_NO_DISK;
+				}
+
+				f->f_indirect = blkno;
+				// trigger a bc_pgfault
+				memset(diskaddr(blkno), 0, PGSIZE);
+				flush_block(diskaddr(blkno));
+			}
+			else {
+				return -E_NOT_FOUND;
+			}
+		}
+
+		uint32_t* addr = (uint32_t*)diskaddr(f->f_indirect);
+		if(addr[f->f_indirect - NDIRECT] == 0){
+			if(alloc){
+				uint32_t blkno = alloc_block();
+				if(blkno < 0){
+					return -E_NO_DISK;
+				}
+
+				addr[f->f_indirect - NDIRECT] = blkno;
+				memset(diskaddr(blkno), 0, PGSIZE);
+				flush_block(diskaddr(blkno));
+			}
+			else {
+				return -E_NOT_FOUND;
+			}
+		}
+
+		*ppdiskbno = &addr[f->f_indirect - NDIRECT];
+		return 0;
+	}
+
+	// filebno < NDIRECT, no need to check alloc 
+
+	if(f->f_direct[filebno]){
+		*ppdiskbno = f->f_direct + filebno;
+		return 0;
+	}
+
+	// alloc in f_direct
+	uint32_t blkno = alloc_block();
+	if(blkno < 0){
+		return -E_NO_DISK;
+	}
+
+	f->f_direct[filebno] = blkno;
+	memset(diskaddr(blkno), 0, PGSIZE);
+	flush_block(diskaddr(blkno));
+	*ppdiskbno = f->f_direct + filebno;
+    // panic("file_block_walk not implemented");
+	return 0;
 }
 
 // Set *blk to the address in memory where the filebno'th
