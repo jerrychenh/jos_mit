@@ -245,7 +245,7 @@ sys_page_map(envid_t srcenvid, void *srcva,
 	}
 
 	struct Env *dst_env;
-	res = envid2env(dstenvid, &dst_env, 1);
+	res = envid2env(dstenvid, &dst_env, 0);
 	if(res < 0){
 		return -E_BAD_ENV;
 	}
