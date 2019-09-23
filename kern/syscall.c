@@ -393,18 +393,23 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 		return -E_INVAL;
 	}
 
-	if((uintptr_t)env->env_ipc_dstva < UTOP){
+	if((uintptr_t)env->env_ipc_dstva < UTOP && (uintptr_t)srcva < UTOP){
 		// cprintf("ipc map: %x", env->env_ipc_dstva);
-		if(sys_page_map(0, srcva, envid, env->env_ipc_dstva, perm) < 0){
-			return -E_NO_MEM;
+		int r;
+		r = sys_page_map(0, srcva, envid, env->env_ipc_dstva, perm);
+		if(r < 0){
+			cprintf("Fail sys_page_map in sys_ipc_try_send!");
+			return r;
 		}
 
 		env->env_ipc_perm = perm;
 	}
+	else{
+		env->env_ipc_perm = 0;
+	}
 
 	env->env_ipc_from = curenv->env_id;
 	env->env_ipc_value = value;
-	env->env_ipc_perm = 0;
 	env->env_ipc_recving = false;
 
 	// cprintf("recv envid: %x, value: %d\n", env->env_id, env->env_ipc_value);
