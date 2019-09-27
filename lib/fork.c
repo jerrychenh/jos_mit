@@ -76,7 +76,13 @@ duppage(envid_t envid, unsigned pn)
 
 	// LAB 4: Your code here.
 	if ((uvpd[PDX(va)] & PTE_P) && (uvpt[pn] & PTE_P) && (uvpt[pn] & PTE_U)){
-		if(uvpt[pn] & (PTE_W | PTE_COW)) {
+
+		if(uvpt[pn] & PTE_SHARE){
+			if(sys_page_map(0, va, envid, va, uvpt[pn] & PTE_SYSCALL) < 0){
+				panic("error map page in duppage!");
+			}
+		}
+		else if(uvpt[pn] & (PTE_W | PTE_COW)) {
 			// parent page is writable or copy-on-write
 			if(sys_page_map(0, va, envid, va, PTE_P|PTE_U|PTE_COW) < 0){
 				panic("error map page in duppage!");

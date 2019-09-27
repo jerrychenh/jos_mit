@@ -302,6 +302,19 @@ static int
 copy_shared_pages(envid_t child)
 {
 	// LAB 5: Your code here.
+	uintptr_t addr;
+	size_t pn;
+	for (addr = 0; addr < USTACKTOP; addr += PGSIZE){
+		pn = PGNUM(addr);
+		if ((uvpd[PDX(addr)] & PTE_P) 
+				&& (uvpt[pn] & PTE_P) 
+				&& (uvpt[pn] & PTE_U)
+				&& (uvpt[pn] & PTE_SHARE)){
+			int r;
+			if ((r = sys_page_map(0, (void*)addr, child, (void*)addr, uvpt[pn] & PTE_SYSCALL)) < 0)
+				panic("spawn: sys_page_map data: %e", r);
+		}
+	}
 	return 0;
 }
 
