@@ -25,6 +25,16 @@ umain(int argc, char **argv)
 	if ((r = fork()) < 0)
 		panic("fork: %e", r);
 	if (r == 0) {
+		// child
+		// below 4 lines are just test? of course not:P
+		// fd 0 is used for std input, while fd 1 is std output
+		// 1. we first open 0, 1 by two calls to opencons, 
+		// 2. then open "testshell.sh" which is fd 2
+		// 3. call pipe(pfds), where pfds[0] is fd 3, pfds[1] is fd 4
+		// 4. dup rfd to 0, so fd 0 is open testshell.sh
+		// 5. dup wfd to 1, which is pfds[1], fd 4 the write only part of the pipe
+		// 6. then fd 2 and fd 4 are closed
+		// so the status is 0 <- testshell.sh, 1 <- write only part of pipe, 3 <- read only part of pipe
 		dup(rfd, 0);
 		dup(wfd, 1);
 		close(rfd);
@@ -36,6 +46,12 @@ umain(int argc, char **argv)
 		wait(r);
 		exit();
 	}
+
+	// parent
+	// what if close(rfd) before child dup?
+	// this rfd and child rfd are in different memory space
+	// and fork() would have the page ref of rfd increase,
+	// so it is ok to close separately, infact if not, fd would leak. 
 	close(rfd);
 	close(wfd);
 
