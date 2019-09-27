@@ -95,19 +95,23 @@ again:
 				exit();
 			}
 			if (r == 0) {
+				// child, read from parent
 				if (p[0] != 0) {
 					dup(p[0], 0);
 					close(p[0]);
 				}
 				close(p[1]);
+				// next cycle, parse cmd after '|'
 				goto again;
 			} else {
+				// parent, write to child
 				pipe_child = r;
 				if (p[1] != 1) {
 					dup(p[1], 1);
 					close(p[1]);
 				}
 				close(p[0]);
+				// continue current cmd
 				goto runit;
 			}
 			panic("| not implemented");
